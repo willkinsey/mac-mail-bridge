@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>__LABEL__</string>
+  <!-- Run Apple's Python directly (no shell wrapper) so the Mail permission attaches to one stable program. -->
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/bin/python3</string>
+    <string>-m</string>
+    <string>mailbridge.daemon</string>
+  </array>
+  <key>WorkingDirectory</key>
+  <string>__REPO__</string>
+  <!-- Only in the signed-in desktop session, where Mail runs. -->
+  <key>LimitLoadToSessionType</key>
+  <string>Aqua</string>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>ThrottleInterval</key>
+  <integer>10</integer>
+  <key>StandardOutPath</key>
+  <string>__HOME__/Library/Logs/mac-mail-bridge/helper.log</string>
+  <key>StandardErrorPath</key>
+  <string>__HOME__/Library/Logs/mac-mail-bridge/helper.log</string>
+</dict>
+</plist>

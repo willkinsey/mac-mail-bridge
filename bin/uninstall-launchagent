@@ -1,0 +1,7 @@
+#!/bin/sh
+# Stops and removes the LaunchAgent. Leaves settings and logs in place.
+set -eu
+LABEL="${1:-local.mac-mail-bridge}"
+launchctl bootout "gui/$(id -u)/$LABEL" 2>/dev/null || true
+rm -f "$HOME/Library/LaunchAgents/$LABEL.plist"
+echo "Removed $LABEL."

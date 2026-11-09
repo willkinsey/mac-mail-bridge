@@ -1,0 +1,16 @@
+#!/bin/sh
+# Installs (or reinstalls) the helper as a per-user LaunchAgent and starts it.
+# Usage: bin/install-launchagent [label]   (default label: local.mac-mail-bridge)
+set -eu
+LABEL="${1:-local.mac-mail-bridge}"
+REPO="$(cd "$(dirname "$0")/.." && pwd)"
+DEST="$HOME/Library/LaunchAgents/$LABEL.plist"
+DOMAIN="gui/$(id -u)"
+mkdir -p "$HOME/Library/LaunchAgents" "$HOME/Library/Logs/mac-mail-bridge"
+sed -e "s|__LABEL__|$LABEL|g" -e "s|__REPO__|$REPO|g" -e "s|__HOME__|$HOME|g" \
+  "$REPO/launchd/mac-mail-bridge.plist.template" > "$DEST"
+plutil -lint "$DEST" >/dev/null
+launchctl bootout "$DOMAIN/$LABEL" 2>/dev/null || true
+launchctl bootstrap "$DOMAIN" "$DEST"
+echo "Installed $DEST and started $LABEL."
+echo "Log: $HOME/Library/Logs/mac-mail-bridge/helper.log"
