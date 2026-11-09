@@ -14,7 +14,7 @@ In the setup that led to this project, the Codex command sandbox blocked access 
 
 The fix: a small background helper (a per-user LaunchAgent) holds the Mail permission itself. Agents call it as an MCP stdio tool server, and the server forwards each request over a local Unix socket. The helper uses the accounts already set up in Mail.
 
-**Verified** on macOS 27.0.1 with the Codex agent in the ChatGPT desktop app (manual runs and a scheduled automation) and Hermes Agent. It works with the Mac unlocked, and with the screen locked while the user stays signed in. **Not expected to work (untested):** signed out, or after a restart before login, because the helper only runs in a signed-in session. See [Setup](#setup).
+**Verified** on macOS 27.0.1 with the Codex agent in the ChatGPT desktop app (manual runs and a scheduled automation) and Hermes Agent. It works with the Mac unlocked, and with the screen locked while the user stays signed in. **Not yet tested:** signed out, or after a restart before login. See [Setup](#setup).
 
 ## How It Works
 
@@ -95,7 +95,7 @@ Other MCP clients work too: launch `bin/mailbridge-mcp` as a stdio server.
 ## Tested Behavior
 
 - Works with the screen locked while the user stays signed in. Tested with direct calls, a Hermes agent, and a Codex scheduled automation.
-- Doesn't work when logged out or after a restart before login, because the LaunchAgent only runs in a signed-in desktop session.
+- Not yet tested: signed out, or after a restart before login.
 
 ## Commands
 
