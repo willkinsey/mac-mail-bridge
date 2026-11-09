@@ -2,7 +2,19 @@
 
 A small, read-only bridge that lets local AI agents (for example, the Codex agent in the ChatGPT desktop app, or Hermes Agent) work with Apple Mail on a Mac. They talk to it as an MCP tool server, and it keeps working while the screen is locked.
 
-It solves a specific problem: sandboxed agents often can't drive Mail with AppleScript themselves. They either lack macOS Automation permission or are blocked from reaching Apple's scripting services. Here, one background helper holds the Mail permission, and every agent goes through it.
+## Why This Exists: Apple Mail Access for ChatGPT, Codex, and Hermes Agent on macOS
+
+Mail is open on your Mac and you can see the inbox, yet a ChatGPT/Codex task on the same Mac can't reach it. Typical symptoms:
+
+- `osascript` reports Mail isn't running (`-600`) even though it's open.
+- AppleScript fails to connect to `com.apple.hiservices-xpcservice`.
+- Desktop-control fallbacks fail on a locked screen with `Mac is locked and automatic unlock could not unlock it`.
+
+In the setup that led to this project, the Codex command sandbox blocked access to `com.apple.hiservices-xpcservice`, the service named in the AppleScript error. It failed even with Mail open and the Mac unlocked. Running commands from the agent's shell doesn't carry a Mac app's own Automation permission.
+
+The fix: a small background helper (a per-user LaunchAgent) holds the Mail permission itself. Agents call it as an MCP stdio tool server, and the server forwards each request over a local Unix socket. The helper uses the accounts already set up in Mail.
+
+**Verified** on macOS 27.0.1 with the Codex agent in the ChatGPT desktop app (manual runs and a scheduled automation) and Hermes Agent. It works with the Mac unlocked, and with the screen locked while the user stays signed in. **Not expected to work (untested):** signed out, or after a restart before login, because the helper only runs in a signed-in session. See [Setup](#setup).
 
 ## How It Works
 
