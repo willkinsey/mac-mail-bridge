@@ -1,31 +1,29 @@
 # Mac Mail Bridge
 
-A small, read-only bridge that lets local AI agents (for example, the Codex agent in the ChatGPT desktop app, or Hermes Agent) work with Apple Mail on a Mac. They talk to it as an MCP tool server, and it keeps working while the screen is locked.
+A small, read-only bridge that lets [Hermes Agent](https://github.com/NousResearch/hermes-agent) work with Apple Mail on a Mac. Hermes talks to it as an MCP tool server, and it keeps working while the screen is locked.
 
-## Why This Exists: Apple Mail Access for ChatGPT, Codex, and Hermes Agent on macOS
+## Why This Exists: Apple Mail Access for Hermes Agent on macOS
 
-Mail is open on your Mac and you can see the inbox, yet a ChatGPT/Codex task on the same Mac can't reach it. Typical symptoms:
+On macOS, a program needs Automation permission to control Mail, and that permission belongs to the program that asked for it. If an agent scripts Mail directly, whatever the agent runs gets full control of Mail. Typical symptoms when the permission is missing or held by a different program:
 
+- `osascript` fails with `-1743` (not authorized to send Apple events to Mail).
 - `osascript` reports Mail isn't running (`-600`) even though it's open.
-- AppleScript fails to connect to `com.apple.hiservices-xpcservice`.
-- Desktop-control fallbacks fail on a locked screen with `Mac is locked and automatic unlock could not unlock it`.
+- Desktop-control fallbacks fail on a locked screen.
 
-In the setup that led to this project, the Codex command sandbox blocked access to `com.apple.hiservices-xpcservice`, the service named in the AppleScript error. It failed even with Mail open and the Mac unlocked. Running commands from the agent's shell doesn't carry a Mac app's own Automation permission.
+The fix: a small background helper (a per-user LaunchAgent) holds the Mail permission itself and offers only a fixed list of operations. Hermes calls it as an MCP stdio tool server, and the server forwards each request over a local Unix socket. The helper uses the accounts already set up in Mail.
 
-The fix: a small background helper (a per-user LaunchAgent) holds the Mail permission itself. Agents call it as an MCP stdio tool server, and the server forwards each request over a local Unix socket. The helper uses the accounts already set up in Mail.
-
-**Verified** on macOS 27.0.1 with the Codex agent in the ChatGPT desktop app (manual runs and a scheduled automation) and Hermes Agent. It works with the Mac unlocked, and with the screen locked while the user stays signed in. **Not yet tested:** signed out, or after a restart before login. See [Setup](#setup).
+**Verified** on macOS 27.0.1 with Hermes Agent. It works with the Mac unlocked, and with the screen locked while the user stays signed in. **Not yet tested:** signed out, or after a restart before login. See [Setup](#setup).
 
 ## How It Works
 
 ```
-Agent A (e.g. Codex) ──┐                      ┌─> helper (mailbridge.daemon) ──> Apple Mail
-                       ├─ mailbridge-mcp ─────┤     Unix socket, owner-only
-Agent B (e.g. Hermes) ─┘   (MCP over stdio)   │     fixed operations only
+Hermes Agent ── mailbridge-mcp ──┬─> helper (mailbridge.daemon) ──> Apple Mail
+                (MCP over stdio)  │     Unix socket, owner-only
+                                  │     fixed operations only
 ```
 
 - **Helper** (`bin/mailbridge-daemon`): the only program that talks to Mail. It runs as a per-user LaunchAgent and listens on `~/Library/Application Support/mac-mail-bridge/bridge.sock` (mode 0600, no network port). It runs one operation at a time.
-- **Adapter** (`bin/mailbridge-mcp`): the MCP stdio server each agent launches. It has no Mail access; it only forwards calls to the helper.
+- **Adapter** (`bin/mailbridge-mcp`): the MCP stdio server Hermes launches. It has no Mail access; it only forwards calls to the helper.
 - **Operations** (`mailbridge/operations.py`): a fixed, named list. There is no generic script or shell operation. Every Mail script takes its input as an argument, never pasted into the script text.
 - **Account allowlist**: operations only touch the accounts listed in a local settings file.
 
@@ -63,38 +61,25 @@ All three are read-only. None of them launch Mail; if Mail isn't open, they say 
    /usr/bin/python3 -c "from mailbridge import client; print(client.call('account_present'))"
    ```
 
-5. **Connect your agents** (next section).
+5. **Connect Hermes** (next section).
 
-## Connecting Agents
-
-**Codex / ChatGPT desktop app**: add this to `~/.codex/config.toml`:
-
-```toml
-[mcp_servers.mail_bridge]
-command = "/path/to/mac-mail-bridge/bin/mailbridge-mcp"
-args = []
-startup_timeout_sec = 20
-```
-
-**Hermes Agent**:
+## Connecting Hermes Agent
 
 ```bash
 hermes -p <profile> mcp add mail_bridge --command /path/to/mac-mail-bridge/bin/mailbridge-mcp
 ```
 
-Other MCP clients work too: launch `bin/mailbridge-mcp` as a stdio server.
+Other MCP clients can launch `bin/mailbridge-mcp` as a stdio server too, but only Hermes has been tested.
 
-## Lessons Learned (Agent Quirks)
+## Lessons Learned
 
-- **Codex desktop app hides MCP servers** behind one-line descriptions ("deferred namespaces") and skips servers with a blank description. That's why the adapter returns `instructions` on `initialize`.
-- **Codex scheduled automations** at low reasoning effort may not find the tools on their own and fall back to computer use. Name the route in the automation prompt: use the `exec` tool and call `await tools.mcp__mail_bridge__mail_bridge_latest_subject({})`.
 - **Hermes caches each server's tool list.** `/reload-mcp` reports "no server changes" when only a server's tools changed. To pick up new tools, run `hermes -p <profile> mcp remove mail_bridge`, then add it again; the gateway reconciles within seconds.
 - **Mail and AppleScript:** copy Mail's lists with `get` and index into them. Iterating live references and coercing them to text fails with error -1700.
 - **Unix socket paths** on macOS are limited to 103 bytes.
 
 ## Tested Behavior
 
-- Works with the screen locked while the user stays signed in. Tested with direct calls, a Hermes agent, and a Codex scheduled automation.
+- Works with the screen locked while the user stays signed in. Tested with direct calls and a Hermes agent.
 - Not yet tested: signed out, or after a restart before login.
 
 ## Commands

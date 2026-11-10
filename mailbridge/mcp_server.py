@@ -1,4 +1,4 @@
-"""MCP adapter (stdio). Each AI agent (e.g. Codex / ChatGPT desktop app, Hermes Agent) launches this as a tool server.
+"""MCP adapter (stdio). Hermes Agent (or any MCP client) launches this as a tool server.
 
 It holds no Mail access itself: it only lists the helper's fixed operations as
 tools and forwards calls to the helper's socket. Standard library only.
@@ -14,8 +14,8 @@ from . import __version__, client, operations
 
 TOOL_PREFIX = "mail_bridge_"
 
-# Shown to the agent as this tool server's description. The ChatGPT desktop app
-# hides tool servers behind these descriptions and skips ones that are blank.
+# Shown to the agent as this tool server's description. Some MCP clients hide
+# tool servers behind these descriptions and skip ones that are blank.
 INSTRUCTIONS = (
     "Apple Mail bridge on this Mac. Use these tools for any Apple Mail task "
     "instead of computer use, AppleScript, or osascript. Tools: mail_bridge_ping "
